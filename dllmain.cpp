@@ -27,7 +27,7 @@ void RunHooking()
         g_fnHkRenderGetBuffer, 
         &g_oRenderGetBuffer
     );
-    renderHooker.InstallHook(
+    /*renderHooker.InstallHook(
         g_fnHkRenderReleaseBuffer,
         &g_oRenderReleaseBuffer
     );
@@ -40,7 +40,7 @@ void RunHooking()
     captureHooker.InstallHook(
         g_fnHkCaptureReleaseBuffer,
         &g_oCaptureReleaseBuffer
-    );
+    );*/
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,

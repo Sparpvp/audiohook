@@ -50,10 +50,12 @@ CaptureAudioClientHooker::CaptureAudioClientHooker(void** vTablePtr)
 // Swap Render GetBuffer Function VTable entry with our hooked one
 void RenderAudioClientHooker::InstallHook(const tRenderGetBuffer ourHookFunc, tRenderGetBuffer* origFunc)
 {
-    unique_ptr<VTEntrySwapper> vts = Trampoline64(
+    /*unique_ptr<VTEntrySwapper> vts = Trampoline64(
         reinterpret_cast<BYTE*>(ourHookFunc),
         reinterpret_cast<BYTE**>(origFunc)
-    );
+    );*/
+    VTEntrySwapper* vts = new VTEntrySwapper();
+    std::cout << "hkFunc: " << std::hex << ourHookFunc << std::endl;
     vts->HelperGetBuffer(m_vTablePtr, ourHookFunc);
 }
 

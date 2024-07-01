@@ -49,7 +49,7 @@ unique_ptr<VTEntrySwapper> Trampoline64(BYTE* hkFunc, BYTE** origFunc)
 	PatchEpilogue(hookEndJumpAddress, popaGateway, (LPVOID)origFunc);
 
 	return std::make_unique<VTEntrySwapper>(VTEntrySwapper());
-	}
+}
 
 void PatchEpilogue(uintptr_t startHkFunc, LPVOID gatewayAddress, LPVOID origFunc)
 {
