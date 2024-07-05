@@ -9,11 +9,15 @@
 
 using std::unique_ptr;
 
-unique_ptr<VTEntrySwapper> Trampoline64(BYTE* hkFunc, BYTE** origFunc);
+unique_ptr<VTEntrySwapper> Trampoline64(BYTE *hkFunc, BYTE **origFunc, void (*__register_saver)(), DWORD offset);
 
-LPVOID ConstructGateway(_In_ uintptr_t startHkFunc, _In_ void (*__register_saver)(), _In_opt_ BYTE* origFunc);
-void DetourHookedFunction(uintptr_t startHkFunc, LPVOID gatewayAddress);
-void PatchEpilogue(uintptr_t startHkFunc, LPVOID gatewayAddress, LPVOID origFunc);
+LPVOID ConstructGateway(_In_ uintptr_t startHkFunc, _In_ void (*__register_saver)(), _In_opt_ BYTE *origFunc);
+void Detour(uintptr_t ptrSrc, void (*hookFunc)(), uintptr_t ptrTramp);
+uintptr_t BuildUnknownGateway(uintptr_t beginHook, size_t &minBytes);
+uintptr_t ResolveJumpAddress(BYTE *funcPtr);
 
 // Function happily copied from Kyle Halladay. Shoutout to his blog.
-void* AllocatePageNearAddress(void* targetAddr);
+void *AllocatePageNearAddress(void *targetAddr);
+
+// void DetourHookedFunction(uintptr_t startHkFunc, LPVOID gatewayAddress);
+// void PatchEpilogue(uintptr_t startHkFunc, LPVOID gatewayAddress, LPVOID origFunc);
