@@ -27,12 +27,12 @@ void RunHooking()
         g_fnHkRenderGetBuffer, 
         &g_oRenderGetBuffer
     );
-    /*renderHooker.InstallHook(
+    renderHooker.InstallHook(
         g_fnHkRenderReleaseBuffer,
         &g_oRenderReleaseBuffer
     );
 
-    CaptureAudioClientHooker captureHooker = CaptureAudioClientHooker(captureVTablePtr);
+    /*CaptureAudioClientHooker captureHooker = CaptureAudioClientHooker(captureVTablePtr);
     captureHooker.InstallHook(
         g_fnHkCaptureGetBuffer,
         &g_oCaptureGetBuffer

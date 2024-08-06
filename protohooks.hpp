@@ -13,10 +13,10 @@ HRESULT __stdcall g_fnHkRenderGetBuffer(
     // Our code
     HRESULT status = g_oRenderGetBuffer(NumFramesRequested, ppData);
 
-    __pusha_64();
+    //__pusha_64();
     OutputDebugStringA("[RENDER] GetBuffer");
     std::cout << "[RENDER] GetBuffer Hooked from vtable!" << std::endl;
-    __popa_64();
+    //__popa_64();
 
     // Trampoline
     return status;

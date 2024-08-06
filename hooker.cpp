@@ -50,12 +50,17 @@ CaptureAudioClientHooker::CaptureAudioClientHooker(void** vTablePtr)
 // Swap Render GetBuffer Function VTable entry with our hooked one
 void RenderAudioClientHooker::InstallHook(const tRenderGetBuffer ourHookFunc, tRenderGetBuffer* origFunc)
 {
-    /*unique_ptr<VTEntrySwapper> vts = Trampoline64(
-        reinterpret_cast<BYTE*>(ourHookFunc),
-        reinterpret_cast<BYTE**>(origFunc)
-    );*/
-    VTEntrySwapper* vts = new VTEntrySwapper();
     std::cout << "hkFunc: " << std::hex << ourHookFunc << std::endl;
+
+    unique_ptr<VTEntrySwapper> vts = Trampoline64(
+        reinterpret_cast<BYTE*>(ourHookFunc),
+        reinterpret_cast<BYTE**>(origFunc),
+        __pusha_64,
+        0
+    );
+
+    // TODO insert Tramp64 call for __popa_64 at hardcoded offset
+
     vts->HelperGetBuffer(m_vTablePtr, ourHookFunc);
 }
 
@@ -64,8 +69,11 @@ void RenderAudioClientHooker::InstallHook(const tRenderReleaseBuffer ourHookFunc
 {
     unique_ptr<VTEntrySwapper> vts = Trampoline64(
         reinterpret_cast<BYTE*>(ourHookFunc),
-        reinterpret_cast<BYTE**>(origFunc)
+        reinterpret_cast<BYTE**>(origFunc),
+        __pusha_64,
+        0
     );
+    // TODO insert Tramp64 call for __popa_64 at hardcoded offset
     vts->HelperReleaseBuffer(m_vTablePtr, ourHookFunc);
 }
 
@@ -74,8 +82,11 @@ void CaptureAudioClientHooker::InstallHook(const tCaptureGetBuffer ourHookFunc, 
 {
     unique_ptr<VTEntrySwapper> vts = Trampoline64(
         reinterpret_cast<BYTE*>(ourHookFunc),
-        reinterpret_cast<BYTE**>(origFunc)
+        reinterpret_cast<BYTE**>(origFunc),
+        __pusha_64,
+        0
     );
+    // TODO insert Tramp64 call for __popa_64 at hardcoded offset
     vts->HelperGetBuffer(m_vTablePtr, ourHookFunc);
 }
 
@@ -84,7 +95,10 @@ void CaptureAudioClientHooker::InstallHook(const tCaptureReleaseBuffer ourHookFu
 {
     unique_ptr<VTEntrySwapper> vts = Trampoline64(
         reinterpret_cast<BYTE*>(ourHookFunc),
-        reinterpret_cast<BYTE**>(origFunc)
+        reinterpret_cast<BYTE**>(origFunc),
+        __pusha_64,
+        0
     );
+    // TODO insert Tramp64 call for __popa_64 at hardcoded offset
     vts->HelperReleaseBuffer(m_vTablePtr, ourHookFunc);
 }

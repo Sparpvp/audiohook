@@ -11,7 +11,8 @@ unique_ptr<VTEntrySwapper> Trampoline64(
 	BYTE *hkFunc,
 	BYTE **origFunc,
 	void (*__register_saver)(),
-	DWORD offset)
+	DWORD offset
+)
 {
 	// TODO: Should double check if these jump tables that need
 	// to be resolved add some kind of compiler specificity.
@@ -21,7 +22,9 @@ unique_ptr<VTEntrySwapper> Trampoline64(
 	LPVOID regOpGateway = ConstructGateway(
 		hookJumpAddress,
 		__register_saver,
-		0);
+		0,
+		true
+	);
 
 	/*
 	BEGIN HOOK
@@ -35,50 +38,54 @@ unique_ptr<VTEntrySwapper> Trampoline64(
 	(back:) |
 			jmp trampoline
 		trampoline:
-			stolenBytes (occhio alla lunghezza degli opcode!)
+			"stolenBytes" (occhio alla lunghezza degli opcode!)
 			jmp back (next instruction)
 	*/
 
 	// Address of where some kind of regOp needs to be performed
 	// Aka address of actual code, before or after the OrigFunc call
-	uintptr_t beginHook = reinterpret_cast<uintptr_t>(hookJumpAddress) + offset;
+	uintptr_t beginHook = hookJumpAddress + offset;
 
 	// Build the trampoline that executes the future stolen bytes
-	size_t stolenLen = 0;
-	uintptr_t stolenPtrTramp = BuildUnknownGateway(beginHook, &stolenLen);
-	memset(beginHook, 0x90, stolenLen);
+	int stolenLen = 0;
+	uintptr_t stolenPtrTramp = BuildUnknownGateway(beginHook, stolenLen);
+	DWORD oldProtect;
+	VirtualProtect((LPVOID)beginHook, stolenLen, PAGE_EXECUTE_READWRITE, &oldProtect);
+	memset((void*)beginHook, 0x90, stolenLen);
+	VirtualProtect((LPVOID)beginHook, stolenLen, oldProtect, &oldProtect);
 
 	// Jump to the gateway before jumping to the tramp
-	Detour(beginHook, regOpGateway, stolenPtrTramp, stolenLen);
+	Detour(beginHook, (uintptr_t)regOpGateway, stolenPtrTramp);
 
-	return make_unique<VTEntrySwapper>(VTEntrySwapper());
+	return std::make_unique<VTEntrySwapper>(VTEntrySwapper());
 }
 
-void Detour(uintptr_t ptrSrc, void (*hookFunc)(), uintptr_t ptrTramp)
+void Detour(uintptr_t ptrSrc, uintptr_t hookFunc, uintptr_t ptrTramp)
 {
-	constexpr int pushaLen = 1; // quello che era
+	constexpr int pushaLen = 7 + 8 * 2 + 7;
 
-	// Resolve pusha64 code address
-	// uintptr_t startHookFunc = ResolveJumpAddress(hookFunc); // no more actually. this will be called on the gate
-	uintptr_t startHookFunc = (uintptr_t)hookFunc;
-	DWORD relHookFunc = startHookFunc - ptrSrc - 5;
+	DWORD relHookFunc = hookFunc - ptrSrc - 5;
 
+	DWORD oldProtect;
+	VirtualProtect((LPVOID)ptrSrc, 5, PAGE_EXECUTE_READWRITE, &oldProtect);
 	*(BYTE *)(ptrSrc) = 0xE9;
 	*(DWORD *)(ptrSrc + 1) = relHookFunc;
+	VirtualProtect((LPVOID)ptrSrc, 5, oldProtect, &oldProtect);
 
 	// JMP to tramp after the gate
-	DWORD relTrampAddr = (uintptr_t)(startHookFunc + pushaLen) - ptrTramp - 5;
+	DWORD relTrampAddr = (uintptr_t)(hookFunc + pushaLen) - ptrTramp - 5;
 
-	*(BYTE *)(startHookFunc + pushaLen) = 0xE9;
-	*(DWORD *)(startHookFunc + pushaLen + 1) = relTrampAddr;
+	*(BYTE *)(hookFunc + pushaLen) = 0xE9;
+	*(DWORD *)(hookFunc + pushaLen + 1) = relTrampAddr;
 }
 
-uintptr_t BuildUnknownGateway(uintptr_t beginHook, size_t &minBytes)
+uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 {
 	minBytes = 0;
 	constexpr size_t jmpSizeBytes = 5;
+	constexpr int pushaLen = 7 + 8 * 2 + 7;
 
-	LPVOID *gateAddr = AllocatePageNearAddress(beginHook);
+	LPVOID gateAddr = AllocatePageNearAddress((void*)beginHook);
 
 	// Get size of the bytes that are going to be stolen
 	DISASM infos;
@@ -93,12 +100,22 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, size_t &minBytes)
 	}
 
 	// Copy the aforementioned bytes in the gate
-	memcpy(gateAddr, (void *)beginHook, minBytes);
+	memcpy((void*)gateAddr, (void*)beginHook, minBytes);
 
+	// TODO FIX: problema strano, gateaddr sembra essere scritto correttamente
+	// nel memcpy, ma l'indirizzo quando metto il jmp è completmanete diverso
+	// a sto punto verificare l'address prima del gateaddr e vedere se muta o cosa
+	 
 	// Jump back to the next instruction after the trampoline has executed
-	DWORD relJmpBack = beginHook + minBytes - (uintptr_t)gateAddr - 5;
+	DWORD relJmpBack = (beginHook + minBytes) - ((uintptr_t)gateAddr + pushaLen) - 5;
 	*(BYTE *)(gateAddr) = 0xE9;
-	*(DWORD *)(gateAddr + 1) = relJmpBack;
+	*(DWORD *)((uintptr_t)gateAddr + 1) = relJmpBack;
+
+	std::cout << "bH: " << std::hex << beginHook << std::endl;
+	std::cout << "dst: " << std::hex << beginHook+minBytes << std::endl;
+	std::cout << "gateAddr: " << std::hex << gateAddr << std::endl;
+	std::cout << "from: " << std::hex << (uintptr_t)gateAddr + pushaLen << std::endl;
+	std::cout << "offset: " << std::hex << relJmpBack << std::endl;
 
 	return (uintptr_t)gateAddr;
 }
@@ -110,7 +127,9 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, size_t &minBytes)
 LPVOID ConstructGateway(
 	_In_ uintptr_t startHkFunc,
 	_In_ void (*__register_saver)(),
-	_In_opt_ DWORD offset)
+	_In_opt_ DWORD offset,
+	_In_ bool jmpBack
+)
 {
 	/*
 		sub/add rsp, 108h = 7 bytes
@@ -135,9 +154,13 @@ LPVOID ConstructGateway(
 	relativeJmpBackAddress = (BYTE *)(startHkFunc - pushaSize) - (BYTE *)gatewayAddress;
 	if (offset != 0)
 		relativeJmpBackAddress += offset;
-	// Add the jump back; at the end of the gate
-	*(BYTE *)((uintptr_t)gatewayAddress + pushaSize) = 0xE9;
-	*(uintptr_t *)((uintptr_t)gatewayAddress + pushaSize + 1) = relativeJmpBackAddress;
+
+	if (jmpBack)
+	{
+		// Add the jump back; at the end of the gate
+		*(BYTE*)((uintptr_t)gatewayAddress + pushaSize) = 0xE9;
+		*(uintptr_t*)((uintptr_t)gatewayAddress + pushaSize + 1) = relativeJmpBackAddress;
+	}
 
 	// std::cout << "Gate addr: " << gatewayAddress << std::endl;
 
@@ -196,8 +219,8 @@ uintptr_t ResolveJumpAddress(BYTE *funcPtr)
 
 	if (*instruction != 0xE9)
 	{
-		std::cout << "ERR: No jump detected." << std::endl;
-		return (uintptr_t) nullptr;
+		std::cout << "[Warning]: No jump detected. This is probably an issue." << std::endl;
+		return (uintptr_t) funcPtr;
 	}
 
 	DWORD offset = *(DWORD *)(instruction + 1);
