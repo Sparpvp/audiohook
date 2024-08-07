@@ -5,6 +5,7 @@
 #include "templatefuncs.h"
 #include "ptrglobal.hpp"
 #include <vector>
+#include <capstone/capstone.h>
 
 using std::unique_ptr;
 
@@ -85,41 +86,42 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 	minBytes = 0;
 	constexpr size_t jmpSizeBytes = 5;
 	constexpr int pushaLen = 7 + 8 * 2 + 7;
-
 	int numInstructions = 0;
 
 	LPVOID gateAddr = AllocatePageNearAddress((void*)beginHook);
 
 	// Get size of the bytes that are going to be stolen
-	std::vector<DISASM> instructions;
-	DISASM infos;
-	memset(&infos, 0, sizeof(DISASM));
-	infos.EIP = (UIntPtr)beginHook;
-	infos.Archi = 64;
-	while (minBytes < 2 * jmpSizeBytes)
-	{
-		int len = Disasm(&infos);
-		instructions.push_back(infos);
-		infos.EIP += len;
+	csh handle;
+	if (cs_open(CS_ARCH_X86, CS_MODE_64, &handle) != CS_ERR_OK)
+		return -1;
+	cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
 
-		minBytes += len;
-		numInstructions++;
+	cs_insn* stolenInstructions;
+	size_t count = cs_disasm(handle, (uint8_t*)beginHook, 32, (uint64_t)beginHook, 0, &stolenInstructions);
+	if (count > 0)
+	{
+		while (minBytes < jmpSizeBytes)
+		{
+			minBytes += stolenInstructions[numInstructions].size;
+			numInstructions++;
+		}
 	}
 
 	// Copy the aforementioned bytes in the gate
-	/*
-		TODO: relocation of registers might be needed
-		in fact, in my tests it is.
-	*/
+	// Note that RIP-Relative addressing needs to be relocated,
+	// so we must adjust it if the stolen bytes contain it.
+	uintptr_t stolenBytesAddr = (uintptr_t)gateAddr;
 	for (int i = 0; i < numInstructions; i++)
 	{
-		if (IsRelativeAddressing(instructions[i]))
-		{
-			std::cout << "Instruction " << i << ": RELATIVE" << std::endl;
-			// TODO now relocate addresses
-		}
+		cs_insn instr = stolenInstructions[i];
+		if (IsRIPRelativeInstr(&instr))
+			RelocateAddresses(&instr, (void*)stolenBytesAddr);
+		memcpy((void*)stolenBytesAddr, instr.bytes, instr.size);
+		stolenBytesAddr += instr.size;
 	}
-	memcpy((void*)gateAddr, (void*)beginHook, minBytes);
+	
+	cs_free(stolenInstructions, count);
+	cs_close(&handle);
 
 	// Jump back to the next instruction after the trampoline has executed
 	DWORD relJmpBack = (beginHook + minBytes) - ((uintptr_t)gateAddr + minBytes) - 5;
@@ -237,89 +239,3 @@ uintptr_t ResolveJumpAddress(BYTE *funcPtr)
 
 	return jumpAddress;
 }
-
-// unique_ptr<VTEntrySwapper> Trampoline64(
-// 	BYTE *hkFunc,
-// 	BYTE **origFunc,
-// 	DWORD offset)
-// {
-// 	uintptr_t beginHook = reinterpret_cast<uintptr_t>(hkFunc) + offset;
-
-// }
-
-// unique_ptr<VTEntrySwapper> Trampoline64(BYTE* hkFunc, BYTE** origFunc)
-// {
-// 	// Calculate relative address to jump back
-// 	uintptr_t hookJumpAddress = ResolveJumpAddress((BYTE*)hkFunc);
-
-// 	DWORD offsetToEndHook = GetEndOfHook((BYTE*)hookJumpAddress, -1, origFunc);
-// 	uintptr_t hookEndJumpAddress = hookJumpAddress + offsetToEndHook;
-
-// 	// Build __pusha_64 and __popa_64 gateways
-// 	LPVOID pushaGateway = ConstructGateway(
-// 		hookJumpAddress,
-// 		__pusha_64,
-// 		NULL
-// 	);
-// 	LPVOID popaGateway = ConstructGateway(
-// 		hookEndJumpAddress,
-// 		__popa_64,
-// 		*origFunc
-// 	);
-
-// 	// Modify hkFunc to jump to the first gateway and adjust the prologue
-// 	DetourHookedFunction(hookJumpAddress, pushaGateway);
-
-// 	PatchEpilogue(hookEndJumpAddress, popaGateway, (LPVOID)origFunc);
-
-// 	return std::make_unique<VTEntrySwapper>(VTEntrySwapper());
-// }
-
-// void PatchEpilogue(uintptr_t startHkFunc, LPVOID gatewayAddress, LPVOID origFunc)
-// {
-// 	DWORD offsetToEndHook = GetEndOfHook(
-// 		(BYTE*)startHkFunc,
-// 		1000,
-// 		origFunc
-// 	);
-
-// 	constexpr int sizeof86relJmp = 5;
-// 	DWORD prot;
-// 	VirtualProtect(
-// 		reinterpret_cast<LPVOID>(startHkFunc + offsetToEndHook),
-// 		sizeof86relJmp,
-// 		PAGE_EXECUTE_READWRITE,
-// 		&prot
-// 	);
-// 	DWORD relPopaAddress = (uintptr_t)gatewayAddress - startHkFunc - 5;
-// 	*(BYTE*)(startHkFunc + offsetToEndHook) = 0xE9;
-// 	*(DWORD*)((BYTE*)startHkFunc + offsetToEndHook + 1) = relPopaAddress;
-// 	VirtualProtect(
-// 		reinterpret_cast<LPVOID>(startHkFunc + offsetToEndHook),
-// 		sizeof86relJmp,
-// 		prot,
-// 		&prot
-// 	);
-// }
-
-// void DetourHookedFunction(uintptr_t startHkFunc, LPVOID gatewayAddress)
-// {
-// 	// Find the end of the prologue, delimited by the first lea instruction.
-// 	// This could be inaccurate, but for our needs it's good enough.
-// 	DWORD offsetToEndPrologue = FindPrologue((BYTE*)startHkFunc, 200);
-// 	// NOP the prologue at the start of the hookFunction and change its memory protection
-// 	DWORD prot;
-// 	VirtualProtect((LPVOID)startHkFunc, offsetToEndPrologue, PAGE_EXECUTE_READWRITE, &prot);
-// 	memset((void*)startHkFunc, 0x90, offsetToEndPrologue);
-// 	// Write the jump to the gate at the start of the hooked function
-// 	uintptr_t offsetToGate = (uintptr_t)gatewayAddress - startHkFunc - 5;
-// 	*(BYTE*)startHkFunc = 0xE9;
-// 	*(DWORD*)((BYTE*)startHkFunc + 1) = offsetToGate;
-// 	VirtualProtect((LPVOID)startHkFunc, offsetToEndPrologue, prot, &prot);
-
-// 	//std::cout << "Offset to gate " << std::hex << offsetToGate << std::endl;
-// 	//std::cout << "Addy: " << std::hex << (uintptr_t)gatewayAddress << std::endl;
-// 	//std::cout << "pusha64: " << std::hex << __pusha_64 << std::endl;
-// 	std::cout << "hkFunc: " << std::hex << (uintptr_t)startHkFunc << std::endl;
-// 	//std::cout << "offset to end prologue: " << std::hex << offsetToEndPrologue << std::endl;
-// }

@@ -18,6 +18,3 @@ uintptr_t ResolveJumpAddress(BYTE *funcPtr);
 
 // Function happily copied from Kyle Halladay. Shoutout to his blog.
 void *AllocatePageNearAddress(void *targetAddr);
-
-// void DetourHookedFunction(uintptr_t startHkFunc, LPVOID gatewayAddress);
-// void PatchEpilogue(uintptr_t startHkFunc, LPVOID gatewayAddress, LPVOID origFunc);

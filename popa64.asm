@@ -3,7 +3,7 @@
 .CODE
 
 __popa_64 PROC
-	add rsp, 100h
+	add rsp, 108h
 	pop r15		; push/pop r15...r8 length is 2 byte
 	pop r14
 	pop r13

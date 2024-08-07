@@ -18,7 +18,7 @@ __pusha_64 PROC
 	push r13
 	push r14
 	push r15
-	sub rsp, 100h
+	sub rsp, 108h
 
 __pusha_64 ENDP
 
