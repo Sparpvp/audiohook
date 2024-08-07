@@ -73,7 +73,7 @@ void Detour(uintptr_t ptrSrc, uintptr_t hookFunc, uintptr_t ptrTramp)
 	VirtualProtect((LPVOID)ptrSrc, 5, oldProtect, &oldProtect);
 
 	// JMP to tramp after the gate
-	DWORD relTrampAddr = (uintptr_t)(hookFunc + pushaLen) - ptrTramp - 5;
+	DWORD relTrampAddr = ptrTramp - (uintptr_t)(hookFunc + pushaLen) - 5;
 
 	*(BYTE *)(hookFunc + pushaLen) = 0xE9;
 	*(DWORD *)(hookFunc + pushaLen + 1) = relTrampAddr;
@@ -86,6 +86,8 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 	constexpr int pushaLen = 7 + 8 * 2 + 7;
 
 	LPVOID gateAddr = AllocatePageNearAddress((void*)beginHook);
+
+	std::cout << "Gate addr: " << std::hex << gateAddr << std::endl;
 
 	// Get size of the bytes that are going to be stolen
 	DISASM infos;
@@ -100,22 +102,16 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 	}
 
 	// Copy the aforementioned bytes in the gate
+	/*
+		TODO: relocation of registers might be needed
+		in fact, in my tests it is.
+	*/
 	memcpy((void*)gateAddr, (void*)beginHook, minBytes);
-
-	// TODO FIX: problema strano, gateaddr sembra essere scritto correttamente
-	// nel memcpy, ma l'indirizzo quando metto il jmp è completmanete diverso
-	// a sto punto verificare l'address prima del gateaddr e vedere se muta o cosa
 	 
 	// Jump back to the next instruction after the trampoline has executed
-	DWORD relJmpBack = (beginHook + minBytes) - ((uintptr_t)gateAddr + pushaLen) - 5;
-	*(BYTE *)(gateAddr) = 0xE9;
-	*(DWORD *)((uintptr_t)gateAddr + 1) = relJmpBack;
-
-	std::cout << "bH: " << std::hex << beginHook << std::endl;
-	std::cout << "dst: " << std::hex << beginHook+minBytes << std::endl;
-	std::cout << "gateAddr: " << std::hex << gateAddr << std::endl;
-	std::cout << "from: " << std::hex << (uintptr_t)gateAddr + pushaLen << std::endl;
-	std::cout << "offset: " << std::hex << relJmpBack << std::endl;
+	DWORD relJmpBack = (beginHook + minBytes) - ((uintptr_t)gateAddr + minBytes) - 5;
+	*(BYTE *)((uintptr_t)gateAddr+minBytes) = 0xE9;
+	*(DWORD *)((uintptr_t)gateAddr + minBytes + 1) = relJmpBack;
 
 	return (uintptr_t)gateAddr;
 }
