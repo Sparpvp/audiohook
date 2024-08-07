@@ -5,16 +5,6 @@
 
 #include "beaengine-5.3.0/headers/BeaEngine.h"
 
-// This is incredibly sketchy, todo use opcodes / something else
-bool instructionIsLea(DISASM& disasm)
-{
-	// std::cout << "istr: " << disasm.CompleteInstr << std::endl;
-	if (std::string(disasm.CompleteInstr).find("lea") != std::string::npos)
-		return true;
-
-	return false;
-}
-
 DWORD FindPrologue(const BYTE* hkFunc, const int maxSize)
 {
 	DISASM disasm;
@@ -33,28 +23,6 @@ DWORD FindPrologue(const BYTE* hkFunc, const int maxSize)
 
 		disasm.EIP += len;
 	}
-}
-
-bool instructionUsesRsp(DISASM& disasm)
-{
-	/*if (
-		disasm.Operand1.Registers.gpr & REG4 ||
-		disasm.Operand2.Registers.gpr & REG4 ||
-		disasm.Operand1.Memory.BaseRegister & REG4 ||
-		disasm.Operand2.Memory.BaseRegister & REG4 ||
-		disasm.Instruction.ImplicitUsedRegs.gpr & REG4 ||
-		disasm.Instruction.ImplicitModifiedRegs.gpr & REG4
-		)
-	{
-		return true;
-	}*/
-	if (std::string(disasm.CompleteInstr).find("rsp") != std::string::npos)
-	{
-		std::cout << "contiene rsp\n";
-		return true;
-	}
-
-	return false;
 }
 
 DWORD GetEndOfHook(const BYTE* hkFunc, const int maxSize, LPVOID g_oFn)
@@ -95,4 +63,61 @@ DWORD IsStartOfEpilogue(const BYTE* hkFunc, const int maxSize)
 
 		disasm.EIP += len;
 	}
+}
+
+void RelocateAddresses(LPVOID src, int len)
+{
+
+}
+
+// Returns false if relocation is not needed, otherwise returns true
+// Call this in a loop to check for relocation on the stolen bytes
+bool IsRelativeAddressing(DISASM instr)
+{
+	if (instr.Operand1.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand2.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand3.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand4.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand5.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand6.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand7.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand8.OpType == MEMORY_TYPE + RELATIVE_ ||
+		instr.Operand9.OpType == MEMORY_TYPE + RELATIVE_)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+// This is incredibly sketchy, todo use opcodes / something else
+bool instructionIsLea(DISASM& disasm)
+{
+	// std::cout << "istr: " << disasm.CompleteInstr << std::endl;
+	if (std::string(disasm.CompleteInstr).find("lea") != std::string::npos)
+		return true;
+
+	return false;
+}
+
+bool instructionUsesRsp(DISASM& disasm)
+{
+	/*if (
+		disasm.Operand1.Registers.gpr & REG4 ||
+		disasm.Operand2.Registers.gpr & REG4 ||
+		disasm.Operand1.Memory.BaseRegister & REG4 ||
+		disasm.Operand2.Memory.BaseRegister & REG4 ||
+		disasm.Instruction.ImplicitUsedRegs.gpr & REG4 ||
+		disasm.Instruction.ImplicitModifiedRegs.gpr & REG4
+		)
+	{
+		return true;
+	}*/
+	if (std::string(disasm.CompleteInstr).find("rsp") != std::string::npos)
+	{
+		std::cout << "contiene rsp\n";
+		return true;
+	}
+
+	return false;
 }

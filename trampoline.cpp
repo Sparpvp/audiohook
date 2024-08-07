@@ -4,6 +4,7 @@
 #include "opcodescanner.h"
 #include "templatefuncs.h"
 #include "ptrglobal.hpp"
+#include <vector>
 
 using std::unique_ptr;
 
@@ -85,11 +86,12 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 	constexpr size_t jmpSizeBytes = 5;
 	constexpr int pushaLen = 7 + 8 * 2 + 7;
 
+	int numInstructions = 0;
+
 	LPVOID gateAddr = AllocatePageNearAddress((void*)beginHook);
 
-	std::cout << "Gate addr: " << std::hex << gateAddr << std::endl;
-
 	// Get size of the bytes that are going to be stolen
+	std::vector<DISASM> instructions;
 	DISASM infos;
 	memset(&infos, 0, sizeof(DISASM));
 	infos.EIP = (UIntPtr)beginHook;
@@ -97,8 +99,11 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 	while (minBytes < 2 * jmpSizeBytes)
 	{
 		int len = Disasm(&infos);
+		instructions.push_back(infos);
 		infos.EIP += len;
+
 		minBytes += len;
+		numInstructions++;
 	}
 
 	// Copy the aforementioned bytes in the gate
@@ -106,8 +111,16 @@ uintptr_t BuildUnknownGateway(uintptr_t beginHook, int &minBytes)
 		TODO: relocation of registers might be needed
 		in fact, in my tests it is.
 	*/
+	for (int i = 0; i < numInstructions; i++)
+	{
+		if (IsRelativeAddressing(instructions[i]))
+		{
+			std::cout << "Instruction " << i << ": RELATIVE" << std::endl;
+			// TODO now relocate addresses
+		}
+	}
 	memcpy((void*)gateAddr, (void*)beginHook, minBytes);
-	 
+
 	// Jump back to the next instruction after the trampoline has executed
 	DWORD relJmpBack = (beginHook + minBytes) - ((uintptr_t)gateAddr + minBytes) - 5;
 	*(BYTE *)((uintptr_t)gateAddr+minBytes) = 0xE9;

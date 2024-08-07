@@ -7,4 +7,8 @@
 DWORD FindPrologue(const BYTE* hkFunc, const int maxSize);
 DWORD GetEndOfHook(const BYTE* hkFunc, const int maxSize, LPVOID g_oFn);
 DWORD IsStartOfEpilogue(const BYTE* hkFunc, const int maxSize);
+void RelocateAddresses(LPVOID src, int len);
+bool IsRelativeAddressing(DISASM instr);
+
+bool instructionIsLea(DISASM& disasm);
 bool instructionUsesRsp(DISASM& disasm);
