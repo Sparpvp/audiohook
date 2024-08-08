@@ -87,7 +87,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>"C:\Users\spar\source\repos\COM-Hooking\COM-Hooking\beaengine-5.3.0\dll_x64\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>".\src\beaengine-5.3.0\lib\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -110,7 +110,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>"C:\Users\spar\source\repos\COM-Hooking\COM-Hooking\beaengine-5.3.0\dll_x64\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>".\src\beaengine-5.3.0\lib\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -129,7 +129,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>"C:\Users\spar\source\repos\COM-Hooking\COM-Hooking\beaengine-5.3.0\dll_x64\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>".\src\beaengine-5.3.0\lib\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -152,41 +152,32 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>"C:\Users\spar\source\repos\COM-Hooking\COM-Hooking\beaengine-5.3.0\dll_x64\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>".\src\beaengine-5.3.0\lib\BeaEngine.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="interfacedispatcher.h" />
-    <ClInclude Include="opcodescanner.h" />
-    <ClInclude Include="protohooks.hpp" />
-    <ClInclude Include="ptrglobal.hpp" />
-    <ClInclude Include="registersaver.h" />
-    <ClInclude Include="templatefuncs.h" />
-    <ClInclude Include="hooker.h" />
-    <ClInclude Include="trampoline.h" />
-    <ClInclude Include="vtables.h" />
+    <ClInclude Include="src\hooker.h" />
+    <ClInclude Include="src\interfacedispatcher.h" />
+    <ClInclude Include="src\opcodescanner.h" />
+    <ClInclude Include="src\protohooks.hpp" />
+    <ClInclude Include="src\ptrglobal.hpp" />
+    <ClInclude Include="src\registersaver.h" />
+    <ClInclude Include="src\templatefuncs.h" />
+    <ClInclude Include="src\trampoline.h" />
+    <ClInclude Include="src\vtables.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="hooker.cpp" />
-    <ClCompile Include="interfacedispatcher.cpp" />
-    <ClCompile Include="opcodescanner.cpp" />
-    <ClCompile Include="trampoline.cpp" />
-    <ClCompile Include="vtables.cpp" />
+    <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\hooker.cpp" />
+    <ClCompile Include="src\interfacedispatcher.cpp" />
+    <ClCompile Include="src\opcodescanner.cpp" />
+    <ClCompile Include="src\trampoline.cpp" />
+    <ClCompile Include="src\vtables.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="popa64.asm">
-      <FileType>Document</FileType>
-    </MASM>
-    <MASM Include="pusha64.asm">
-      <FileType>Document</FileType>
-    </MASM>
-    <MASM Include="testhook.asm">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </MASM>
+    <MASM Include="src\popa64.asm" />
+    <MASM Include="src\pusha64.asm" />
+    <MASM Include="src\testhook.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -54,7 +54,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         OutputDebugStringA("Begin Hooking");
         RunHooking();
         OutputDebugStringA("Everything's hooked.");
-    // Care about process detach -> return or idk, cleanup maybe
     }
     return TRUE;
 }
