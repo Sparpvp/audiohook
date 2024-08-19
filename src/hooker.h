@@ -4,9 +4,16 @@
 
 class VTEntrySwapper
 {
-public:
+private:
     VTEntrySwapper() {}
+    friend std::unique_ptr<VTEntrySwapper> Trampoline64(
+        BYTE* hkFunc,
+        BYTE** origFunc,
+        void (*__register_saver)(),
+        DWORD offset
+    );
 
+public:
     template <typename T>
     void HelperGetBuffer(void **vTablePtr, const T ourHookFunc);
     template <typename T>
