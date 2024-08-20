@@ -2,9 +2,8 @@
 
 #include <audioclient.h>
 
-class VTables
+namespace VTables
 {
-public:
 	void** GetRenderClientVTable(IAudioRenderClient* audioRenderClient);
 	void** GetCaptureClientVTable(IAudioCaptureClient* audioCaptureClient);
-};
+}

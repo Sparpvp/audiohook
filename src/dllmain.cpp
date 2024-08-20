@@ -18,9 +18,8 @@ void RunHooking()
     IAudioRenderClient* mockAudioRenderClient = InterfaceDispatcher::GetRenderCOMInterface();
     IAudioCaptureClient* mockAudioCaptureClient = InterfaceDispatcher::GetCaptureCOMInterface();
 
-    VTables vtb;
-    void** renderVTablePtr = vtb.GetRenderClientVTable(mockAudioRenderClient);
-    void** captureVTablePtr = vtb.GetCaptureClientVTable(mockAudioCaptureClient);
+    void** renderVTablePtr = VTables::GetRenderClientVTable(mockAudioRenderClient);
+    void** captureVTablePtr = VTables::GetCaptureClientVTable(mockAudioCaptureClient);
 
     RenderAudioClientHooker renderHooker = RenderAudioClientHooker(renderVTablePtr);
     renderHooker.InstallHook(
